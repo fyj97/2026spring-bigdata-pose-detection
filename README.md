@@ -39,8 +39,6 @@ Useful options: `--conf`, `--device` (e.g. `0` or `cpu`), `--max_frames` (video:
 
 ## 2. Run visualization: `visualize_yolo_annotations.py`
 
-```
-
 **Video mode** (records include `frame_index`):
 
 ```bash
@@ -50,3 +48,32 @@ python visualize_yolo_annotations.py --annotations ./out_yolo/annotations.jsonl 
 Options: `--conf` (keypoint confidence threshold), `--max_frames` (only process the first N records; handy for quick tests).
 
 **Typical workflow:** run step **1** to create `out_yolo/annotations.jsonl`, then run step **2** with the matching image or video command.
+
+## Canvas submission
+
+Submit **one** zip archive named exactly:
+
+`HW_VIDEO_<YOUR_UNI>.zip`
+
+Replace `<YOUR_UNI>` with your UNI, netID, or other student identifier as specified for the course.
+
+The zip must contain **at the top level** (no extra nesting required, but a single root folder is fine if Canvas or the grader expects it):
+
+| Item | Description |
+|------|-------------|
+| **Original video** | The same source file you used for annotation (e.g. `my_video.mp4`). |
+| **Generated images folder** | Directory of overlay or extracted frames from your run (e.g. `viz/` or `out_yolo/viz/` from `--save_viz` or the visualize script output). |
+| **Annotation file** | Your keypoint export, e.g. `annotations.jsonl` (and optionally `run_meta.json` if the assignment asks for run metadata). |
+
+**Example layout inside the zip:**
+
+```text
+HW_VIDEO_{UNI}.zip
+├── my_video.mp4
+├── viz/
+│   ├── frame_000000.jpg
+│   └── ...
+└── annotations.jsonl
+```
+
+Before uploading, open the zip locally and confirm all three parts are present and paths open correctly on another machine.
