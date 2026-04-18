@@ -2,11 +2,12 @@
 """
 Multi-person skeleton annotation with Ultralytics YOLOv8 / YOLO11-Pose (pip install only).
 
-Outputs:
+Outputs (under --output_dir):
   - annotations.jsonl : one line per image, or per sampled video frame
   - run_meta.json     : run configuration
+  - By default: overlaid JPGs and (for video) <video_stem>_viz.mp4 in the same folder.
 
-Video sampling (--video_sample_interval, default 1.0 s) limits how many frames are written.
+Video sampling (--video_sample_interval) limits how many frames are written.
 
 Install:
   pip install -r requirements-yolo.txt
@@ -20,7 +21,10 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
+import shutil
 import sys
+import tempfile
 from pathlib import Path
 from typing import Any
 
@@ -120,10 +124,12 @@ def main() -> None:
     ap.add_argument("--iou", type=float, default=0.7, help="NMS IoU threshold.")
     ap.add_argument("--imgsz", type=int, default=640, help="Inference size (multiple of 32).")
     ap.add_argument("--device", type=str, default="", help="e.g. 0 or cpu. Empty = default.")
+    ap.set_defaults(save_viz=True)
     ap.add_argument(
-        "--save_viz",
-        action="store_true",
-        help="Also save overlaid frames to output_dir/viz (slower).",
+        "--no-save-viz",
+        action="store_false",
+        dest="save_viz",
+        help="Skip overlaid JPGs and (for video) the mp4; only write JSONL and run_meta.",
     )
     ap.add_argument(
         "--max_frames",
@@ -134,7 +140,7 @@ def main() -> None:
     ap.add_argument(
         "--video_sample_interval",
         type=float,
-        default=1.0,
+        default=0.5,
         help="Video only: seconds between annotated frames (default 1). Use 0 to annotate every frame.",
     )
     args = ap.parse_args()
@@ -152,9 +158,7 @@ def main() -> None:
         sys.exit(1)
 
     out_root.mkdir(parents=True, exist_ok=True)
-    viz_dir = out_root / "viz"
     if args.save_viz:
-        viz_dir.mkdir(parents=True, exist_ok=True)
         from cv_path import imwrite as _imwrite_unicode
 
         def save_plot(path: str, arr: Any) -> None:
@@ -208,7 +212,11 @@ def main() -> None:
                 sys.exit(1)
             v_fps = float(cap.get(cv2.CAP_PROP_FPS))
             video_stride = video_stride_for_interval(v_fps, args.video_sample_interval)
+            viz_fps = max(1e-3, float(v_fps) / float(video_stride))
             frame_idx = 0
+            viz_writer: Any | None = None
+            viz_video_tmp: Path | None = None
+            viz_video_out = out_root / f"{src.stem}_viz.mp4"
             try:
                 while True:
                     if args.max_frames > 0 and frame_idx >= args.max_frames:
@@ -232,10 +240,44 @@ def main() -> None:
                         n_written += 1
                         if args.save_viz and save_plot is not None:
                             plotted = r.plot()
-                            save_plot(str(viz_dir / f"{frame_idx:06d}.jpg"), plotted)
+                            save_plot(str(out_root / f"{frame_idx:06d}.jpg"), plotted)
+                            if viz_writer is None:
+                                fd, tmp = tempfile.mkstemp(suffix=".mp4")
+                                os.close(fd)
+                                viz_video_tmp = Path(tmp)
+                                h, w = plotted.shape[:2]
+                                viz_writer = cv2.VideoWriter(
+                                    str(viz_video_tmp),
+                                    cv2.VideoWriter_fourcc(*"mp4v"),
+                                    viz_fps,
+                                    (w, h),
+                                )
+                                if not viz_writer.isOpened():
+                                    print(
+                                        "Warning: could not open viz VideoWriter; skipping mp4.",
+                                        flush=True,
+                                    )
+                                    viz_writer = None
+                                    try:
+                                        viz_video_tmp.unlink(missing_ok=True)
+                                    except OSError:
+                                        pass
+                                    viz_video_tmp = None
+                            if viz_writer is not None:
+                                viz_writer.write(plotted)
                     frame_idx += 1
             finally:
+                if viz_writer is not None:
+                    viz_writer.release()
                 cap.release()
+                if viz_video_tmp is not None and viz_video_tmp.exists():
+                    try:
+                        shutil.move(str(viz_video_tmp), str(viz_video_out))
+                    except OSError as e:
+                        print(
+                            f"Warning: could not save viz video to {viz_video_out}: {e}",
+                            flush=True,
+                        )
         else:
             if src.is_file():
                 sources = [str(src)]
@@ -263,7 +305,7 @@ def main() -> None:
 
                 if args.save_viz and save_plot is not None:
                     plotted = r.plot()
-                    save_plot(str(viz_dir / f"{p.stem}_viz.jpg"), plotted)
+                    save_plot(str(out_root / f"{p.stem}_viz.jpg"), plotted)
 
     meta = {
         "source": str(src),

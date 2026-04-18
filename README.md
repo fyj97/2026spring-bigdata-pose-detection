@@ -35,7 +35,7 @@ Run the commands below from the project root (this folder).
 **Single video:**
 
 ```bash
-python annotate_yolo_pose.py --source ./example_video.mp4 --output_dir ./out_yolo --model yolov8m-pose.pt
+python annotate_yolo_pose.py --source ./example_video.mp4 --output_dir ./out_yolo --model yolov8m-pose.pt --no-save-viz
 ```
 
 Useful options: `--conf`, `--device` (e.g. `0` or `cpu`), `--max_frames` (video: stop after N frames), `--save_viz` (also saves overlaid frames under `out_yolo/viz`).
