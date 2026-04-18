@@ -1,0 +1,31 @@
+{
+  "source": "C:\\Users\\Yongjie\\OneDrive\\桌面\\2026 teach\\openpose\\19538311-uhd_2160_3840_24fps.mp4",
+  "max_frames": 0,
+  "model": "yolov8m-pose.pt",
+  "merged_annotations": "C:\\Users\\Yongjie\\OneDrive\\桌面\\2026 teach\\openpose\\out_yolo\\annotations.jsonl",
+  "records": 309,
+  "conf": 0.25,
+  "iou": 0.7,
+  "imgsz": 640,
+  "device": "0",
+  "keypoint_schema": "COCO-17",
+  "keypoint_names": [
+    "nose",
+    "left_eye",
+    "right_eye",
+    "left_ear",
+    "right_ear",
+    "left_shoulder",
+    "right_shoulder",
+    "left_elbow",
+    "right_elbow",
+    "left_wrist",
+    "right_wrist",
+    "left_hip",
+    "right_hip",
+    "left_knee",
+    "right_knee",
+    "left_ankle",
+    "right_ankle"
+  ]
+}
