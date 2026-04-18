@@ -3,8 +3,10 @@
 Multi-person skeleton annotation with Ultralytics YOLOv8 / YOLO11-Pose (pip install only).
 
 Outputs:
-  - annotations.jsonl : one line per image or per video frame
+  - annotations.jsonl : one line per image, or per sampled video frame
   - run_meta.json     : run configuration
+
+Video sampling (--video_sample_interval, default 1.0 s) limits how many frames are written.
 
 Install:
   pip install -r requirements-yolo.txt
@@ -90,6 +92,15 @@ def is_video_path(p: Path) -> bool:
     return p.suffix.lower() in {".mp4", ".avi", ".mov", ".mkv", ".webm", ".m4v", ".wmv"}
 
 
+def video_stride_for_interval(fps: float, interval_sec: float) -> int:
+    """Frames between writes; interval_sec <= 0 means every frame (stride 1)."""
+    if interval_sec <= 0:
+        return 1
+    if fps <= 1e-3 or not np.isfinite(fps):
+        fps = 30.0
+    return max(1, round(float(fps) * float(interval_sec)))
+
+
 def main() -> None:
     ap = argparse.ArgumentParser(description="YOLOv8/YOLO11 multi-person pose -> JSONL")
     ap.add_argument(
@@ -119,6 +130,12 @@ def main() -> None:
         type=int,
         default=0,
         help="Video only: stop after this many frames (0 = entire video).",
+    )
+    ap.add_argument(
+        "--video_sample_interval",
+        type=float,
+        default=1.0,
+        help="Video only: seconds between annotated frames (default 1). Use 0 to annotate every frame.",
     )
     args = ap.parse_args()
 
@@ -171,26 +188,54 @@ def main() -> None:
     meta_path = out_root / "run_meta.json"
     n_written = 0
 
+    video_stride = 1
+    is_video = src.is_file() and is_video_path(src)
+    if is_video:
+        try:
+            import cv2
+        except ImportError:
+            print(
+                "Video processing needs OpenCV. Install: pip install opencv-python",
+                file=sys.stderr,
+            )
+            sys.exit(1)
+
     with merged_path.open("w", encoding="utf-8") as out:
-        if src.is_file() and is_video_path(src):
-            gen = model.predict(source=str(src), stream=True, **predict_kw())
-            for fi, r in enumerate(gen):
-                people = pack_people(r)
-                rec = {
-                    "format": "ultralytics_pose_coco17",
-                    "model": args.model,
-                    "source": str(src),
-                    "frame_index": fi,
-                    "num_people": len(people),
-                    "people": people,
-                }
-                out.write(json.dumps(rec, ensure_ascii=False) + "\n")
-                n_written += 1
-                if args.save_viz and save_plot is not None:
-                    plotted = r.plot()
-                    save_plot(str(viz_dir / f"{fi:06d}.jpg"), plotted)
-                if args.max_frames > 0 and (fi + 1) >= args.max_frames:
-                    break
+        if is_video:
+            cap = cv2.VideoCapture(str(src))
+            if not cap.isOpened():
+                print(f"Cannot open video: {src}", file=sys.stderr)
+                sys.exit(1)
+            v_fps = float(cap.get(cv2.CAP_PROP_FPS))
+            video_stride = video_stride_for_interval(v_fps, args.video_sample_interval)
+            frame_idx = 0
+            try:
+                while True:
+                    if args.max_frames > 0 and frame_idx >= args.max_frames:
+                        break
+                    ret, frame = cap.read()
+                    if not ret or frame is None:
+                        break
+                    if frame_idx % video_stride == 0:
+                        results = model.predict(source=frame, **predict_kw())
+                        r = results[0]
+                        people = pack_people(r)
+                        rec = {
+                            "format": "ultralytics_pose_coco17",
+                            "model": args.model,
+                            "source": str(src),
+                            "frame_index": frame_idx,
+                            "num_people": len(people),
+                            "people": people,
+                        }
+                        out.write(json.dumps(rec, ensure_ascii=False) + "\n")
+                        n_written += 1
+                        if args.save_viz and save_plot is not None:
+                            plotted = r.plot()
+                            save_plot(str(viz_dir / f"{frame_idx:06d}.jpg"), plotted)
+                    frame_idx += 1
+            finally:
+                cap.release()
         else:
             if src.is_file():
                 sources = [str(src)]
@@ -222,7 +267,9 @@ def main() -> None:
 
     meta = {
         "source": str(src),
-        "max_frames": args.max_frames if (src.is_file() and is_video_path(src)) else 0,
+        "max_frames": args.max_frames if is_video else 0,
+        "video_sample_interval": args.video_sample_interval if is_video else None,
+        "video_frame_stride": video_stride if is_video else None,
         "model": args.model,
         "merged_annotations": str(merged_path),
         "records": n_written,

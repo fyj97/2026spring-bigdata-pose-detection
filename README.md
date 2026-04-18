@@ -28,11 +28,6 @@ Run the commands below from the project root (this folder).
 
 ## 1. Run annotation: `annotate_yolo_pose.py`
 
-**Folder of images:**
-
-```bash
-python annotate_yolo_pose.py --source ./images --output_dir ./out_yolo --model yolo11n-pose.pt
-```
 
 **Single video:**
 
@@ -44,10 +39,6 @@ Useful options: `--conf`, `--device` (e.g. `0` or `cpu`), `--max_frames` (video:
 
 ## 2. Run visualization: `visualize_yolo_annotations.py`
 
-**Image mode** (each record’s `source` is an image path):
-
-```bash
-python visualize_yolo_annotations.py --annotations ./out_yolo/annotations.jsonl --output_dir ./out_yolo/viz2
 ```
 
 **Video mode** (records include `frame_index`):
