@@ -1,4 +1,7 @@
-# YOLO pose annotation and visualization
+# Please update the video filename to your recorded video, run the pose detection, and submit the required files to Canvas.
+
+
+## YOLO pose annotation and visualization
 
 Multi-person COCO-17 keypoint detection on images or video with Ultralytics YOLO (YOLOv8 / YOLO11-Pose), exported as JSONL, then drawn as skeleton overlays.
 
