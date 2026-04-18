@@ -116,7 +116,7 @@ def main() -> None:
         default="yolo11n-pose.pt",
         help="Pose weights (e.g. yolo11n-pose.pt, yolov8m-pose.pt). Auto-downloads if missing.",
     )
-    ap.add_argument("--conf", type=float, default=0.25, help="Detection confidence threshold.")
+    ap.add_argument("--conf", type=float, default=0.15, help="Detection confidence threshold.")
     ap.add_argument("--iou", type=float, default=0.7, help="NMS IoU threshold.")
     ap.add_argument("--imgsz", type=int, default=640, help="Inference size (multiple of 32).")
     ap.add_argument("--device", type=str, default="", help="e.g. 0 or cpu. Empty = default.")

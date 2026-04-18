@@ -32,7 +32,7 @@ Run the commands below from the project root (this folder).
 **Single video:**
 
 ```bash
-python annotate_yolo_pose.py --source ./video.mp4 --output_dir ./out_yolo --model yolov8m-pose.pt
+python annotate_yolo_pose.py --source ./example_video.mp4 --output_dir ./out_yolo --model yolov8m-pose.pt
 ```
 
 Useful options: `--conf`, `--device` (e.g. `0` or `cpu`), `--max_frames` (video: stop after N frames), `--save_viz` (also saves overlaid frames under `out_yolo/viz`).
@@ -42,7 +42,7 @@ Useful options: `--conf`, `--device` (e.g. `0` or `cpu`), `--max_frames` (video:
 **Video mode** (records include `frame_index`):
 
 ```bash
-python visualize_yolo_annotations.py --annotations ./out_yolo/annotations.jsonl --video ./video.mp4 --output_dir ./out_yolo/viz2
+python visualize_yolo_annotations.py --annotations ./out_yolo/annotations.jsonl --video ./example_video.mp4 --output_dir ./out_yolo/viz2
 ```
 
 Options: `--conf` (keypoint confidence threshold), `--max_frames` (only process the first N records; handy for quick tests).
